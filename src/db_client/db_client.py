@@ -91,7 +91,7 @@ class DBClient:
         self.database = "postgres"
         db = self._connect()
         curr = db.cursor()
-        self._execute_for_prepare_database(curr, """CREATE database waterpix;""")
+        self._execute_for_prepare_database(curr, """CREATE database drought;""")
         curr.close()
         db.close()
 
@@ -99,7 +99,7 @@ class DBClient:
         db = self._connect()
         curr = db.cursor()
 
-        self._execute_for_prepare_database(curr, """CREATE SCHEMA wp;""")
+        self._execute_for_prepare_database(curr, """CREATE SCHEMA drought;""")
         self._execute_for_prepare_database(curr, """CREATE EXTENSION postgis;""")
 
         for command in create_table_commands:

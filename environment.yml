@@ -1,4 +1,4 @@
-name: py39waterpix
+name: py39drought
 channels:
   - conda-forge
   - defaults
