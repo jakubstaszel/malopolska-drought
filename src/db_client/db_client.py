@@ -50,7 +50,7 @@ class DBClient:
         except psycopg2.errors.DuplicateDatabase:
             print("Database waterpix already created")
         except psycopg2.errors.DuplicateSchema:
-            print("Schema wp already created")
+            print("Schema drought already created")
         except psycopg2.errors.DuplicateTable:
             print("Table already created")
         except psycopg2.errors.DuplicateObject:
@@ -113,7 +113,7 @@ class DBClient:
 
     def get_all_aois(self) -> List[AOI]:
         command = """
-        SELECT geom_id, order_id, ST_AsText(geom), ST_SRID(geom) FROM wp.aois
+        SELECT geom_id, order_id, ST_AsText(geom), ST_SRID(geom) FROM drought.aois
         """
         result = self._execute_get(command)
 
@@ -126,7 +126,7 @@ class DBClient:
         # make path relative to waterpix-backend
         file.make_path_relative()
 
-        command = """INSERT INTO wp.files (order_id, geom_id, path, wq_index, file_extension, date)
+        command = """INSERT INTO drought.files (order_id, geom_id, path, wq_index, file_extension, date)
         VALUES (%s, %s, %s, %s, %s, %s);
         """
         values = (
@@ -144,7 +144,7 @@ class DBClient:
         )
 
     def get_user(self, username: str) -> User:
-        command = f"SELECT * FROM wp.users WHERE username='{username}'"
+        command = f"SELECT * FROM drought.users WHERE username='{username}'"
         result = self._execute_get(command)
 
         users = [

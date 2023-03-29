@@ -1,13 +1,10 @@
 # waterpix-backend
 
-## IMPORTANT
-**waterpix-backend** and **waterpix-frontend** repositories are working together, make sure you download them both locally to your home directory.
-## Configuration steps:
 1. Create and activate virtual environment with conda:
 
 `conda env create -f environment.yml`
 
-`conda activate py39waterpix`
+`conda activate py39drought`
 
 If you want to install any new package:
 - install it with conda e.g. `conda install -c conda-forge black`
