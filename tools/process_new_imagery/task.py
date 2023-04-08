@@ -8,12 +8,20 @@ from shapely.geometry import Polygon
 from src.imagery_processing.get_bands import bands_2A
 from src.imagery_processing.sentinel_api import data_check_2A, data_download_2A
 
-# indexes
+# water indexes
 from src.imagery_processing.indexes.cdom import cdom
 from src.imagery_processing.indexes.turbidity import turbidity
 from src.imagery_processing.indexes.doc import doc
 from src.imagery_processing.indexes.chl_a import chl_a
 from src.imagery_processing.indexes.cya import cya
+
+# drought indexes
+from src.imagery_processing.indexes.ndwi import ndwi
+from src.imagery_processing.indexes.nmdi import nmdi
+from src.imagery_processing.indexes.ndmi import ndmi
+from src.imagery_processing.indexes.ndvi import ndvi
+from src.imagery_processing.indexes.wdrvi import wdrvi
+from src.imagery_processing.indexes.evi import evi
 
 # clouds
 from src.imagery_processing.detect_clouds import detect_clouds
@@ -70,7 +78,8 @@ def run(sen_from: Union[datetime, None], sen_to: Union[datetime, None]) -> None:
             check_folder(Path.cwd().joinpath("data", "download")), products_df
         )
 
-        indexes = {"cdom": [], "turb": [], "doc": [], "chla": [], "cya": []}
+        indexes = {"cdom": [], "turb": [], "doc": [], "chla": [], "cya": [],
+                   "ndwi": [], "nmdi": [], "ndmi": [], "ndvi": [], "wdrvi": [], "evi": []}
 
         output_folder = check_folder(Path.cwd().joinpath("data", "indexes_per_imagery"))
         output_folder_for_clouds = check_folder(
@@ -104,6 +113,62 @@ def run(sen_from: Union[datetime, None], sen_to: Union[datetime, None]) -> None:
                 )
             )
 
+            indexes["ndwi"].append(
+                ndwi(
+                    folder.name,
+                    bands["b03_10m"],
+                    bands["b08_10m"],
+                    output_folder,
+                )
+            )
+
+            indexes["nmdi"].append(
+                nmdi(
+                    folder.name,
+                    bands["b08_10m"],
+                    bands["b11_20m"],
+                    bands["b12_20m"],
+                    output_folder,
+                )
+            )
+
+            indexes["ndmi"].append(
+                ndmi(
+                    folder.name,
+                    bands["b08_10m"],
+                    bands["b11_20m"],
+                    output_folder,
+                )
+            )
+
+            indexes["ndvi"].append(
+                ndvi(
+                    folder.name,
+                    bands["b04_10m"],
+                    bands["b08_10m"],
+                    output_folder,
+                )
+            )
+            
+            indexes["wdrvi"].append(
+                wdrvi(
+                    folder.name,
+                    bands["b04_10m"],
+                    bands["b08_10m"],
+                    output_folder,
+                )
+            )
+            
+            indexes["evi"].append(
+                evi(
+                    folder.name,
+                    bands["b02_10m"],
+                    bands["b04_10m"],
+                    bands["b08_10m"],
+                    output_folder,
+                )
+            )
+
             # detect clouds
             detected_clouds = []
             detected_clouds.append(
@@ -116,7 +181,8 @@ def run(sen_from: Union[datetime, None], sen_to: Union[datetime, None]) -> None:
             )
 
         # reproject to web mercator: EPSG 3857
-        indexes_reproj = {"cdom": [], "turb": [], "doc": [], "chla": [], "cya": []}
+        indexes_reproj = {"cdom": [], "turb": [], "doc": [], "chla": [], "cya": [],
+                   "ndwi": [], "nmdi": [], "ndmi": [], "ndvi": [], "wdrvi": [], "evi": []}
 
         output_folder = check_folder(
             Path.cwd().joinpath("data", "indexes_per_imagery_reprojected")
@@ -127,7 +193,8 @@ def run(sen_from: Union[datetime, None], sen_to: Union[datetime, None]) -> None:
         delete_folder_with_all_files(Path.cwd().joinpath("data", "indexes_per_imagery"))
 
         # merge all products for each index
-        indexes_merged = {"cdom": [], "turb": [], "doc": [], "chla": [], "cya": []}
+        indexes_merged = {"cdom": [], "turb": [], "doc": [], "chla": [], "cya": [],
+                   "ndwi": [], "nmdi": [], "ndmi": [], "ndvi": [], "wdrvi": [], "evi": []}
         output_folder = check_folder(Path.cwd().joinpath("data", "merged"))
         for key in indexes_merged.keys():
             indexes_merged[key].append(
@@ -136,6 +203,9 @@ def run(sen_from: Union[datetime, None], sen_to: Union[datetime, None]) -> None:
         delete_folder_with_all_files(
             Path.cwd().joinpath("data", "indexes_per_imagery_reprojected")
         )
+
+        # drought indexes need additional masking with water bodies
+        drought_indexes = ["ndwi", "nmdi", "ndmi", "ndvi", "wdrvi", "evi"]
 
         # mask rasters with AOIs
         db = DBClient()
