@@ -15,7 +15,7 @@ class File(BaseModel):
     date: dt.datetime
 
     def make_path_relative(self):
-        if not Path.cwd().name == "waterpix-backend":
+        if not Path.cwd().name == "malopolska-drought":
             raise ValueError("Your working directory is not waterpix-backend folder")
         else:
             self.path = self.path.relative_to(Path.cwd())
@@ -23,7 +23,7 @@ class File(BaseModel):
         return self
 
     def make_path_absolute(self):
-        if not Path.cwd().name == "waterpix-backend":
+        if not Path.cwd().name == "malopolska-drought":
             raise ValueError("Your working directory is not waterpix-backend folder")
         else:
             self.path = Path.cwd().joinpath(self.path)
