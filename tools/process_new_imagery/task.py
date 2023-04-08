@@ -2,8 +2,10 @@ from typing import Final, Union, List
 from pathlib import Path
 from datetime import datetime
 from shutil import rmtree
+from copy import deepcopy
 
 from shapely.geometry import Polygon
+import geopandas
 
 from src.imagery_processing.get_bands import bands_2A
 from src.imagery_processing.sentinel_api import data_check_2A, data_download_2A
@@ -36,7 +38,7 @@ from src.imagery_processing.merge import merge_rasters
 from src.db_client.db_client import DBClient
 
 # mask
-from src.imagery_processing.mask import masking
+from src.imagery_processing.mask import masking, masking_aoi
 
 from src.db_client.models.files import File
 
@@ -52,6 +54,17 @@ POLYGON: Final = [
     [20.170504195862613, 50.635562778185566],
     [19.422527512826534, 50.530129894672505],
 ]
+
+WATER_INDEXES: Final = {"cdom": [], "turb": [], "doc": [], "chla": [], "cya": []}
+DROUGHT_INDEXES: Final = {
+    "ndwi": [],
+    "nmdi": [],
+    "ndmi": [],
+    "ndvi": [],
+    "wdrvi": [],
+    "evi": [],
+}
+ALL_INDEXES: Final = {**WATER_INDEXES, **DROUGHT_INDEXES}
 
 
 def check_folder(folder: Path) -> Path:
@@ -72,14 +85,13 @@ def run(sen_from: Union[datetime, None], sen_to: Union[datetime, None]) -> None:
         sen_to,
     )
 
-    # download new satellite imagery
+    # # download new satellite imagery
     if not products_df.empty:
         downloaded = data_download_2A(
             check_folder(Path.cwd().joinpath("data", "download")), products_df
         )
 
-        indexes = {"cdom": [], "turb": [], "doc": [], "chla": [], "cya": [],
-                   "ndwi": [], "nmdi": [], "ndmi": [], "ndvi": [], "wdrvi": [], "evi": []}
+        indexes = deepcopy(ALL_INDEXES)
 
         output_folder = check_folder(Path.cwd().joinpath("data", "indexes_per_imagery"))
         output_folder_for_clouds = check_folder(
@@ -149,7 +161,7 @@ def run(sen_from: Union[datetime, None], sen_to: Union[datetime, None]) -> None:
                     output_folder,
                 )
             )
-            
+
             indexes["wdrvi"].append(
                 wdrvi(
                     folder.name,
@@ -158,7 +170,7 @@ def run(sen_from: Union[datetime, None], sen_to: Union[datetime, None]) -> None:
                     output_folder,
                 )
             )
-            
+
             indexes["evi"].append(
                 evi(
                     folder.name,
@@ -181,20 +193,19 @@ def run(sen_from: Union[datetime, None], sen_to: Union[datetime, None]) -> None:
             )
 
         # reproject to web mercator: EPSG 3857
-        indexes_reproj = {"cdom": [], "turb": [], "doc": [], "chla": [], "cya": [],
-                   "ndwi": [], "nmdi": [], "ndmi": [], "ndvi": [], "wdrvi": [], "evi": []}
+        indexes_reproj = deepcopy(ALL_INDEXES)
 
         output_folder = check_folder(
             Path.cwd().joinpath("data", "indexes_per_imagery_reprojected")
         )
+
         for key in indexes.keys():
             for layer in indexes[key]:
                 indexes_reproj[key].append(epsg3857(layer, output_folder))
         delete_folder_with_all_files(Path.cwd().joinpath("data", "indexes_per_imagery"))
 
         # merge all products for each index
-        indexes_merged = {"cdom": [], "turb": [], "doc": [], "chla": [], "cya": [],
-                   "ndwi": [], "nmdi": [], "ndmi": [], "ndvi": [], "wdrvi": [], "evi": []}
+        indexes_merged = deepcopy(ALL_INDEXES)
         output_folder = check_folder(Path.cwd().joinpath("data", "merged"))
         for key in indexes_merged.keys():
             indexes_merged[key].append(
@@ -205,18 +216,42 @@ def run(sen_from: Union[datetime, None], sen_to: Union[datetime, None]) -> None:
         )
 
         # drought indexes need additional masking with water bodies
-        drought_indexes = ["ndwi", "nmdi", "ndmi", "ndvi", "wdrvi", "evi"]
+        drought_indexes = deepcopy(DROUGHT_INDEXES)
+        output_folder = check_folder(
+            Path.cwd().joinpath("data", "merged_waterBodiesMasked")
+        )
+        water_bodies = geopandas.read_file(
+            Path.cwd().joinpath(
+                "src",
+                "imagery_processing",
+                "geoms_for_merging",
+                "waterBodies_malopolska.shp",
+            )
+        )
+        for key in drought_indexes.keys():
+            indexes_merged[key] = [
+                masking(
+                    layer=indexes_merged[key][0],
+                    mask_name="waterBodies",
+                    masking_geom=water_bodies.geometry,
+                    output_folder=output_folder,
+                    invert=True,
+                )
+            ]
 
         # mask rasters with AOIs
         db = DBClient()
         for aoi in db.get_all_aois():
             for key in indexes_merged.keys():
-                layer_file = masking(
-                    layer=indexes_merged[key][0],
-                    maskingGeom=aoi,
-                    output_folder=Path.cwd().joinpath(
+                output_folder = check_folder(
+                    Path.cwd().joinpath(
                         "data", "final", str(aoi.order_id), str(aoi.geom_id)
-                    ),
+                    )
+                )
+                layer_file = masking_aoi(
+                    layer=indexes_merged[key][0],
+                    masking_geom=aoi,
+                    output_folder=output_folder,
                 )
 
                 # add produced TIF files to DB
