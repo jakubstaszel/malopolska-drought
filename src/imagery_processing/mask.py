@@ -12,6 +12,7 @@ from src.db_client.models.aois import AOI
 def masking_aoi(
     layer: Path,
     masking_geom: AOI,
+    epoch: str,
     output_folder: Path,
     invert: bool = False,
 ) -> Union[Path, None]:
