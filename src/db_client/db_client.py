@@ -118,7 +118,21 @@ class DBClient:
         result = self._execute_get(command)
 
         return [
-            AOI(geom_id=aoi[0], order_id=aoi[1], geom=aoi[2], epsg=aoi[3])
+            AOI(geom_id=aoi[0], order_id=aoi[1], geometry=aoi[2], epsg=aoi[3])
+            for aoi in result
+        ]
+
+    def get_all_aois_for_user(self, user_id: int) -> List[AOI]:
+        command = f"""
+        SELECT aois.geom_id, aois.order_id, ST_AsText(aois.geom), ST_SRID(aois.geom)
+        FROM drought.aois
+        LEFT JOIN drought.orders ON aois.order_id = orders.order_id
+        WHERE orders.user_id = {user_id}
+        """
+        result = self._execute_get(command)
+
+        return [
+            AOI(geom_id=aoi[0], order_id=aoi[1], geometry=aoi[2], epsg=aoi[3])
             for aoi in result
         ]
 
