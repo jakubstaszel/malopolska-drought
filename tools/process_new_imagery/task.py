@@ -85,6 +85,8 @@ def run(sen_from: Union[datetime, None], sen_to: Union[datetime, None]) -> None:
         sen_to,
     )
 
+    timestamp = products_df["generationdate"].mean()
+
     # # download new satellite imagery
     if not products_df.empty:
         downloaded = data_download_2A(
@@ -245,12 +247,17 @@ def run(sen_from: Union[datetime, None], sen_to: Union[datetime, None]) -> None:
             for key in indexes_merged.keys():
                 output_folder = check_folder(
                     Path.cwd().joinpath(
-                        "data", "final", str(aoi.order_id), str(aoi.geom_id)
+                        "data",
+                        "final",
+                        str(aoi.order_id),
+                        str(aoi.geom_id),
+                        str(int(timestamp.timestamp())),
                     )
                 )
                 layer_file = masking_aoi(
                     layer=indexes_merged[key][0],
                     masking_geom=aoi,
+                    epoch=str(int(timestamp.timestamp())),
                     output_folder=output_folder,
                 )
 
@@ -263,6 +270,6 @@ def run(sen_from: Union[datetime, None], sen_to: Union[datetime, None]) -> None:
                             path=layer_file,
                             wq_index=key,
                             file_extension="TIF",
-                            date=datetime.now(),
+                            date=timestamp,
                         )
                     )
