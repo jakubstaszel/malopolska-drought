@@ -29,7 +29,7 @@ def masking_aoi(
     with rasterio.open(layer) as src:
         out_image, out_transform = mask(
             src,
-            [masking_geom.geom],
+            [masking_geom.geometry],
             crop=crop,
             nodata=np.nan,
             all_touched=True,

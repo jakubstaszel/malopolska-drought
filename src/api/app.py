@@ -24,6 +24,7 @@ from .models.authentication import (
     create_access_token,
     ACCESS_TOKEN_EXPIRE_MINUTES,
 )
+from .routers import aois, users
 
 origins = {
     "http://localhost",
@@ -41,6 +42,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(users.router)
+app.include_router(aois.router)
 
 
 @app.get("/")
@@ -114,17 +118,3 @@ async def get_documentation(
     current_user: UserNoPassword = Depends(get_current_active_user),
 ):
     return get_swagger_ui_html(openapi_url="/openapi.json", title="docs")
-
-
-@app.get("/users/me/", response_model=UserNoPassword)
-async def read_users_me(
-    current_user: UserNoPassword = Depends(get_current_active_user),
-):
-    return current_user
-
-
-@app.get("/users/me/items/")
-async def read_own_items(
-    current_user: UserNoPassword = Depends(get_current_active_user),
-):
-    return [{"item_id": "Foo", "owner": current_user.username}]
