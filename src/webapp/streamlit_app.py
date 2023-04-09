@@ -1,37 +1,39 @@
-from collections import namedtuple
-import altair as alt
-import math
-import pandas as pd
 import streamlit as st
+import leafmap.foliumap as leafmap
 
+st.set_page_config(layout="wide")
+
+# Customize the sidebar
+markdown = """
+Web App URL: <https://template.streamlit.app>
+GitHub Repository: <https://github.com/giswqs/streamlit-multipage-template>
 """
-# Welcome to Streamlit!
-Edit `/streamlit_app.py` to customize this app to your heart's desire :heart:
-If you have any questions, checkout our [documentation](https://docs.streamlit.io) and [community
-forums](https://discuss.streamlit.io).
-In the meantime, below is an example of what you can do with just a few lines of code:
+
+st.sidebar.title("About")
+st.sidebar.info(markdown)
+logo = "https://i.imgur.com/UbOXYAU.png"
+st.sidebar.image(logo)
+
+# Customize page title
+st.title("Streamlit for Geospatial Applications")
+
+st.markdown(
+    """
+    This multipage app template demonstrates various interactive web apps created using [streamlit](https://streamlit.io) and [leafmap](https://leafmap.org). It is an open-source project and you are very welcome to contribute to the [GitHub repository](https://github.com/giswqs/streamlit-multipage-template).
+    """
+)
+
+st.header("Instructions")
+
+markdown = """
+1. For the [GitHub repository](https://github.com/giswqs/streamlit-multipage-template) or [use it as a template](https://github.com/giswqs/streamlit-multipage-template/generate) for your own project.
+2. Customize the sidebar by changing the sidebar text and logo in each Python files.
+3. Find your favorite emoji from https://emojipedia.org.
+4. Add a new app to the `pages/` directory with an emoji in the file name, e.g., `1_🚀_Chart.py`.
 """
 
+st.markdown(markdown)
 
-with st.echo(code_location="below"):
-    total_points = st.slider("Number of points in spiral", 1, 5000, 2000)
-    num_turns = st.slider("Number of turns in spiral", 1, 100, 9)
-
-    Point = namedtuple("Point", "x y")
-    data = []
-
-    points_per_turn = total_points / num_turns
-
-    for curr_point_num in range(total_points):
-        curr_turn, i = divmod(curr_point_num, points_per_turn)
-        angle = (curr_turn + 1) * 2 * math.pi * i / points_per_turn
-        radius = curr_point_num / total_points
-        x = radius * math.cos(angle)
-        y = radius * math.sin(angle)
-        data.append(Point(x, y))
-
-    st.altair_chart(
-        alt.Chart(pd.DataFrame(data), height=500, width=500)
-        .mark_circle(color="#0068c9", opacity=0.5)
-        .encode(x="x:Q", y="y:Q")
-    )
+m = leafmap.Map(minimap_control=True)
+m.add_basemap("OpenTopoMap")
+m.to_streamlit(height=500)
