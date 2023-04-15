@@ -25,6 +25,7 @@ def data_check_2A(
     polygon: Polygon,
     sen_from: Union[dt.datetime, None],
     sen_to: Union[dt.datetime, None],
+    if_polygon_inside_image: bool = False,
 ) -> pd.DataFrame:
     """
     Calls Sentinel API to find new 2A products.
@@ -54,12 +55,18 @@ def data_check_2A(
             f"Searching for satellite imagery from {dt.datetime.now() - dt.timedelta(days=4)} to {dt.datetime.now()}"
         )
 
+    if if_polygon_inside_image == True:
+        area_relation = "Contains"
+    else:
+        area_relation = "Intersects"  # - it is by default
+
     products = api.query(
         footprint,
         date=date,
         platformname="Sentinel-2",
         processinglevel="Level-2A",
         cloudcoverpercentage=(0, 100),
+        area_relation=area_relation,
     )
 
     products_df = api.to_dataframe(products)
