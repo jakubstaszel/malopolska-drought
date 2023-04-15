@@ -8,5 +8,10 @@ HOST: Final = "127.0.0.1"
 PORT: Final = "5432"
 
 # open access hub
-OAH_LOGIN: Final = "zuluzi"
-OAH_PASSWORD: Final = "spr@@@wdzAMYwooDE"
+OAH_LOGIN: Final = ""
+OAH_PASSWORD: Final = ""
+
+# ArcGIS Online - only needed
+# if you want to publish data to AGOL
+AGOL_LOGIN: Final = ""
+AGOL_PASSWORD: Final = ""    
