@@ -99,7 +99,7 @@ def masking(
             }
         )
 
-        output_file = output_folder.joinpath(f"masked_with_{mask_name}_{layer.name}")
+        output_file = output_folder.joinpath(f"{layer.stem}_{mask_name}Masked.tif")
         with rasterio.open(output_file, "w", **out_meta) as dest:
             dest.write(out_image)
         return output_file

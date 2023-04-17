@@ -29,9 +29,7 @@ def merge_rasters(index_name: str, layers_to_merge: List[Path], output_folder):
         compress="lzw",
     )
 
-    output_file = output_folder.joinpath(
-        index_name + datetime.now().strftime("_%Y%m%d") + ".tif"
-    )
+    output_file = output_folder.joinpath(index_name + ".tif")
     with rasterio.open(output_file, "w", **kwargs) as dest:
         dest.write(mosaic)
 

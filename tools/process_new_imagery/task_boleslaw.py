@@ -51,7 +51,7 @@ POLYGON: Final = [
     [19.700705772907838, 50.412751801438958],
 ]
 
-WATER_INDEXES: Final = {"cdom": [], "turb": [], "doc": [], "chla": [], "cya": []}
+WATER_INDEXES: Final = {}
 DROUGHT_INDEXES: Final = {
     "ndwi": [],
     "nmdi": [],
@@ -75,7 +75,7 @@ def delete_folder_with_all_files(folder: Path):
 def run_boleslaw(
     sen_from: Union[datetime, None], sen_to: Union[datetime, None]
 ) -> None:
-    # find new products
+    # ------------------------------------------------------------------------------------ find new products
     products_df = data_check_2A(
         check_folder(Path.cwd().joinpath("data", "download")),
         Polygon(POLYGON),
@@ -86,7 +86,7 @@ def run_boleslaw(
 
     timestamp = products_df["generationdate"].mean()
 
-    # # download new satellite imagery
+    # ------------------------------------------------------------------------------------ download new satellite imagery
     if not products_df.empty:
         downloaded = data_download_2A(
             check_folder(Path.cwd().joinpath("data", "download")), products_df
@@ -95,95 +95,77 @@ def run_boleslaw(
         indexes = deepcopy(ALL_INDEXES)
 
         output_folder = check_folder(Path.cwd().joinpath("data", "indexes_per_imagery"))
+        detected_clouds = []
         output_folder_for_clouds = check_folder(
             Path.cwd().joinpath("data", "clouds_masks_per_imagery")
         )
         for folder in downloaded:
             bands = bands_2A(folder)
 
-            # calculate indexes
-            indexes["cdom"].append(
-                cdom(folder.name, bands["b03_10m"], bands["b04_10m"], output_folder)
-            )
-            indexes["turb"].append(
-                turbidity(
-                    folder.name, bands["b03_60m"], bands["b01_60m"], output_folder
+            # ------------------------------------------------------------------------------------ calculate indexes
+            if "ndwi" in indexes.keys():
+                indexes["ndwi"].append(
+                    ndwi(
+                        folder.name,
+                        bands["b03_10m"],
+                        bands["b08_10m"],
+                        output_folder,
+                    )
                 )
-            )
-            indexes["doc"].append(
-                doc(folder.name, bands["b03_10m"], bands["b04_10m"], output_folder)
-            )
-            indexes["chla"].append(
-                chl_a(folder.name, bands["b03_60m"], bands["b01_60m"], output_folder)
-            )
-            indexes["cya"].append(
-                cya(
-                    folder.name,
-                    bands["b03_10m"],
-                    bands["b04_10m"],
-                    bands["b02_10m"],
-                    output_folder,
-                )
-            )
 
-            indexes["ndwi"].append(
-                ndwi(
-                    folder.name,
-                    bands["b03_10m"],
-                    bands["b08_10m"],
-                    output_folder,
+            if "nmdi" in indexes.keys():
+                indexes["nmdi"].append(
+                    nmdi(
+                        folder.name,
+                        bands["b08_10m"],
+                        bands["b11_20m"],
+                        bands["b12_20m"],
+                        output_folder,
+                    )
                 )
-            )
 
-            indexes["nmdi"].append(
-                nmdi(
-                    folder.name,
-                    bands["b08_10m"],
-                    bands["b11_20m"],
-                    bands["b12_20m"],
-                    output_folder,
+            if "ndmi" in indexes.keys():
+                indexes["ndmi"].append(
+                    ndmi(
+                        folder.name,
+                        bands["b08_10m"],
+                        bands["b11_20m"],
+                        output_folder,
+                    )
                 )
-            )
 
-            indexes["ndmi"].append(
-                ndmi(
-                    folder.name,
-                    bands["b08_10m"],
-                    bands["b11_20m"],
-                    output_folder,
+            if "ndvi" in indexes.keys():
+                indexes["ndvi"].append(
+                    ndvi(
+                        folder.name,
+                        bands["b04_10m"],
+                        bands["b08_10m"],
+                        output_folder,
+                    )
                 )
-            )
 
-            indexes["ndvi"].append(
-                ndvi(
-                    folder.name,
-                    bands["b04_10m"],
-                    bands["b08_10m"],
-                    output_folder,
+            if "wdrvi" in indexes.keys():
+                indexes["wdrvi"].append(
+                    wdrvi(
+                        folder.name,
+                        bands["b04_10m"],
+                        bands["b08_10m"],
+                        output_folder,
+                    )
                 )
-            )
 
-            indexes["wdrvi"].append(
-                wdrvi(
-                    folder.name,
-                    bands["b04_10m"],
-                    bands["b08_10m"],
-                    output_folder,
+            if "evi" in indexes.keys():
+                indexes["evi"].append(
+                    evi(
+                        folder.name,
+                        bands["b02_10m"],
+                        bands["b04_10m"],
+                        bands["b08_10m"],
+                        output_folder,
+                    )
                 )
-            )
 
-            indexes["evi"].append(
-                evi(
-                    folder.name,
-                    bands["b02_10m"],
-                    bands["b04_10m"],
-                    bands["b08_10m"],
-                    output_folder,
-                )
-            )
-
-            # detect clouds
-            detected_clouds = []
+            # ------------------------------------------------------------------------------------ detect clouds
             detected_clouds.append(
                 detect_clouds(
                     folder.name,
@@ -193,7 +175,7 @@ def run_boleslaw(
                 )
             )
 
-        # reproject to web mercator: EPSG 3857
+        # ------------------------------------------------------------------------------------ reproject to web mercator: EPSG 3857
         indexes_reproj = deepcopy(ALL_INDEXES)
 
         output_folder = check_folder(
@@ -205,70 +187,71 @@ def run_boleslaw(
                 indexes_reproj[key].append(epsg3857(layer, output_folder))
         delete_folder_with_all_files(Path.cwd().joinpath("data", "indexes_per_imagery"))
 
-        # merge all products for each index
+        # ------------------------------------------------------------------------------------ merge all products for each index
         indexes_merged = deepcopy(ALL_INDEXES)
         output_folder = check_folder(Path.cwd().joinpath("data", "merged"))
         for key in indexes_merged.keys():
             indexes_merged[key].append(
-                merge_rasters(key, indexes_reproj[key], output_folder)
+                merge_rasters(
+                    key
+                    + f"_epoch{int(timestamp.timestamp())}_date{timestamp.strftime('%Y%m%d')}",
+                    indexes_reproj[key],
+                    output_folder,
+                )
             )
         delete_folder_with_all_files(
             Path.cwd().joinpath("data", "indexes_per_imagery_reprojected")
         )
 
-        # drought indexes need additional masking with water bodies
-        drought_indexes = deepcopy(DROUGHT_INDEXES)
-        output_folder = check_folder(
-            Path.cwd().joinpath("data", "merged_waterBodiesMasked")
-        )
-        water_bodies = geopandas.read_file(
+        # ------------------------------------------------------------------------------------ mask rasters with clouds
+        masked_clouds = deepcopy(ALL_INDEXES)
+        clouds = geopandas.read_file(detected_clouds[0])
+        output_folder = check_folder(Path.cwd().joinpath("data", "merged_cloudsMasked"))
+
+        for key in indexes_merged.keys():
+            masked_clouds[key].append(
+                masking(
+                    layer=indexes_merged[key][0],
+                    mask_name="clouds",
+                    masking_geom=clouds.geometry,
+                    output_folder=output_folder,
+                    invert=True,
+                )
+            )
+        delete_folder_with_all_files(Path.cwd().joinpath("data", "merged"))
+
+        # ------------------------------------------------------------------------------------ mask rasters with AOI
+        masked_aoi = deepcopy(ALL_INDEXES)
+        aoi = geopandas.read_file(
             Path.cwd().joinpath(
                 "src",
                 "imagery_processing",
                 "geoms_for_merging",
-                "waterBodies_malopolska.shp",
+                "boleslaw.shp",
             )
         )
-        for key in drought_indexes.keys():
-            indexes_merged[key] = [
+        output_folder = check_folder(
+            Path.cwd().joinpath(
+                "data",
+                "final",
+                f"epoch{int(timestamp.timestamp())}_date{timestamp.strftime('%Y%m%d')}",
+            )
+        )
+        for key in masked_clouds.keys():
+            masked_aoi[key].append(
                 masking(
-                    layer=indexes_merged[key][0],
-                    mask_name="waterBodies",
-                    masking_geom=water_bodies.geometry,
-                    output_folder=output_folder,
-                    invert=True,
-                )
-            ]
-
-        # mask rasters with AOIs
-        db = DBClient()
-        for aoi in db.get_all_aois():
-            for key in indexes_merged.keys():
-                output_folder = check_folder(
-                    Path.cwd().joinpath(
-                        "data",
-                        "final",
-                        str(aoi.order_id),
-                        str(aoi.geom_id),
-                        str(int(timestamp.timestamp())),
-                    )
-                )
-                layer_file = masking_aoi(
-                    layer=indexes_merged[key][0],
-                    masking_geom=aoi,
-                    epoch=str(int(timestamp.timestamp())),
+                    layer=masked_clouds[key][0],
+                    mask_name="aoi",
+                    masking_geom=aoi.geometry,
                     output_folder=output_folder,
                 )
+            )
+        delete_folder_with_all_files(Path.cwd().joinpath("data", "merged_cloudsMasked"))
 
-                # add produced TIF files to DB
-                if layer_file:
-                    db.insert_file(
-                        File(
-                            order_id=aoi.order_id,
-                            geom_id=aoi.geom_id,
-                            path=layer_file,
-                            wq_index=key,
-                            file_extension="TIF",
-                            date=timestamp,
-                        )
-                    )
+        # ------------------------------------------------------------------------------------ create SHP with clouds
+        clouds_aoiClipped = clouds.clip(aoi)
+        clouds_aoiClipped.to_file(
+            output_folder.joinpath(
+                f"clouds_epoch{int(timestamp.timestamp())}_date{timestamp.strftime('%Y%m%d')}"
+            )
+        )
