@@ -75,6 +75,9 @@ def delete_folder_with_all_files(folder: Path):
 def run_boleslaw(
     sen_from: Union[datetime, None], sen_to: Union[datetime, None]
 ) -> None:
+    """
+    This task supports only AOIs that are inside one imagery.
+    """
     # ------------------------------------------------------------------------------------ find new products
     products_df = data_check_2A(
         check_folder(Path.cwd().joinpath("data", "download")),

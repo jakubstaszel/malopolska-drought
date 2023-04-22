@@ -8,7 +8,7 @@ import pandas as pd
 from shapely.geometry import Polygon
 import geopandas
 
-from sentinelsat import SentinelAPI, read_geojson, geojson_to_wkt
+from sentinelsat import SentinelAPI, read_geojson, geojson_to_wkt, make_path_filter
 from sentinelsat.exceptions import InvalidChecksumError
 from requests.exceptions import HTTPError
 import zipfile
@@ -126,3 +126,30 @@ def data_download_2A(folder: Path, products_df) -> List[Path]:
         os.chdir(home)
         print("Trying one more time: ")
         data_download_2A(folder, products_df)
+
+def data_download_clouds_bands(folder: Path, products_df) -> List[Path]:
+    home = Path.cwd()
+    os.chdir(folder)
+    api = SentinelAPI(OAH_LOGIN, OAH_PASSWORD, "https://scihub.copernicus.eu/dhus")
+    try:
+        downloaded = []
+        for product in products_df.iterrows():
+            # product = products_df
+            print(
+                "Now downloading clouds bands: ", product[1]["filename"]
+            )  # filename of the product
+            path_filter = make_path_filter("*MSK_CLASSI_B00.jp2")
+            api.download(product[1]["uuid"], nodefilter=path_filter)  # download the product using uuid
+            path_filter = make_path_filter("*MSK_CLDPRB_20m.jp2")
+            api.download(product[1]["uuid"], nodefilter=path_filter)  # download the product using uuid
+
+            downloaded.append(folder.joinpath(product[1]["filename"]))
+
+        os.chdir(home)
+        return downloaded
+
+    except (InvalidChecksumError, HTTPError) as e:
+        print(e)
+        os.chdir(home)
+        print("Trying one more time: ")
+        data_download_clouds_bands(folder, products_df)

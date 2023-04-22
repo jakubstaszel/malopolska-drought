@@ -1,5 +1,6 @@
 from .task import run
 from .task_boleslaw import run_boleslaw
+from .task_check_clouds_coverage import run_check_clouds_coverage
 import argparse
 from datetime import datetime
 
@@ -11,7 +12,7 @@ def cli() -> None:
         "--task-name",
         "-tn",
         action="store",
-        choices=["task", "boleslaw"],
+        choices=["task", "boleslaw", "clouds"],
         required=True,
         type=str,
         dest="task_name",
@@ -39,3 +40,5 @@ def cli() -> None:
         run(args.sentinel_from, args.sentinel_to)
     elif args.task_name == "boleslaw":
         run_boleslaw(args.sentinel_from, args.sentinel_to)
+    elif args.task_name == "clouds":
+        run_check_clouds_coverage(args.sentinel_from, args.sentinel_to)
