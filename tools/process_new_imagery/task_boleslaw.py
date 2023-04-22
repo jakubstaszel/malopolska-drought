@@ -90,7 +90,7 @@ def run_boleslaw(
     timestamp = products_df["generationdate"].mean()
 
     # ------------------------------------------------------------------------------------ download new satellite imagery
-    if not products_df.empty:
+    if not products_df is None:
         downloaded = data_download_2A(
             check_folder(Path.cwd().joinpath("data", "download")), products_df
         )

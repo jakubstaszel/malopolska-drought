@@ -50,47 +50,47 @@ def run_check_clouds_coverage(
     )
 
     # -------------------------------------- download bands for clouds
-    if not products_df.empty:
+    if not products_df is None:
         downloaded = data_download_clouds_bands(
             check_folder(Path.cwd().joinpath("data", "clouds_coverage_data")),
             products_df,
         )
 
-    output_folder_clouds = check_folder(
-        Path.cwd().joinpath("data", "clouds_coverage_data", "clouds_shp")
-    )
-    statistics = []
-    for folder in downloaded:
-        bands = bands_2A(folder)
-
-        # -------------------------------------- detect clouds
-        clouds_file = detect_clouds(
-            folder.name,
-            bands["cloud_classif"],
-            bands["cloud_prob"],
-            output_folder_clouds,
+        output_folder_clouds = check_folder(
+            Path.cwd().joinpath("data", "clouds_coverage_data", "clouds_shp")
         )
+        statistics = []
+        for folder in downloaded:
+            bands = bands_2A(folder)
 
-        # -------------------------------------- clip clouds to AOI
-        aoi = geopandas.read_file(
-            Path.cwd().joinpath(
-                "src",
-                "imagery_processing",
-                "geoms_for_merging",
-                "boleslaw.shp",
+            # -------------------------------------- detect clouds
+            clouds_file = detect_clouds(
+                folder.name,
+                bands["cloud_classif"],
+                bands["cloud_prob"],
+                output_folder_clouds,
             )
-        )
-        clouds = geopandas.read_file(clouds_file)
-        clouds_aoiClipped = clouds.clip(aoi)
 
-        statistics.append(
-            {
-                "folder": folder.stem,
-                "clouds": sum(clouds_aoiClipped.area) / sum(aoi.area),
-            }
-        )
+            # -------------------------------------- clip clouds to AOI
+            aoi = geopandas.read_file(
+                Path.cwd().joinpath(
+                    "src",
+                    "imagery_processing",
+                    "geoms_for_merging",
+                    "boleslaw.shp",
+                )
+            )
+            clouds = geopandas.read_file(clouds_file)
+            clouds_aoiClipped = clouds.clip(aoi)
 
-    for product in statistics:
-        print(
-            f"Clouds coverage in AOI: {(product['clouds']*100):.2f}% - {product['folder']}"
-        )
+            statistics.append(
+                {
+                    "folder": folder.stem,
+                    "clouds": sum(clouds_aoiClipped.area) / sum(aoi.area),
+                }
+            )
+
+        for product in statistics:
+            print(
+                f"Clouds coverage in AOI: {(product['clouds']*100):.2f}% - {product['folder']}"
+            )

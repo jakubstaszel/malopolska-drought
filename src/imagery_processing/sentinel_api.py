@@ -20,6 +20,23 @@ def _update_lastRefresh_file(datetime: dt.datetime) -> None:
     fileRefresh.close()
 
 
+def _any_product_offline(api, products_df) -> bool:
+    is_any_offline = False
+    for product in products_df.iterrows():
+        is_online = api.is_online(product[1]["uuid"])
+        if not is_online:
+            is_any_offline = True
+            api.trigger_offline_retrieval(product[1]["uuid"])
+            print(
+                f"    {product[1]['filename']} is offline, triggered retrieval from LTA"
+            )
+
+    if is_any_offline:
+        return True
+    else:
+        return False
+
+
 def data_check_2A(
     folder: Path,
     polygon: Polygon,
@@ -71,10 +88,14 @@ def data_check_2A(
 
     products_df = api.to_dataframe(products)
 
+    if _any_product_offline(api, products_df):
+        return None
+
     if products_df.empty:
-        print("No new products found")
+        print("    No new products found")
         # update the datetime of last refresh
         _update_lastRefresh_file(dt.datetime.now())
+        return None
     else:
         print("Products found: ")
         avgClouds = 0.0
@@ -127,6 +148,7 @@ def data_download_2A(folder: Path, products_df) -> List[Path]:
         print("Trying one more time: ")
         data_download_2A(folder, products_df)
 
+
 def data_download_clouds_bands(folder: Path, products_df) -> List[Path]:
     home = Path.cwd()
     os.chdir(folder)
@@ -139,9 +161,13 @@ def data_download_clouds_bands(folder: Path, products_df) -> List[Path]:
                 "Now downloading clouds bands: ", product[1]["filename"]
             )  # filename of the product
             path_filter = make_path_filter("*MSK_CLASSI_B00.jp2")
-            api.download(product[1]["uuid"], nodefilter=path_filter)  # download the product using uuid
+            api.download(
+                product[1]["uuid"], nodefilter=path_filter
+            )  # download the product using uuid
             path_filter = make_path_filter("*MSK_CLDPRB_20m.jp2")
-            api.download(product[1]["uuid"], nodefilter=path_filter)  # download the product using uuid
+            api.download(
+                product[1]["uuid"], nodefilter=path_filter
+            )  # download the product using uuid
 
             downloaded.append(folder.joinpath(product[1]["filename"]))
 
