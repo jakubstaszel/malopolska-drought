@@ -15,6 +15,12 @@ Usage:
 
 `python -m tools.start_api -prod`
 
+## start_web_app
+This is a Streamlit App for displaying data for małopolska drought.
+Usage:
+
+`python -m tools.start_web_app`
+
 ## process_new_imagery
 Checks if new files were uploaded to Open Access Hub, if yes,
 then download it and process to get WQ indexes.
