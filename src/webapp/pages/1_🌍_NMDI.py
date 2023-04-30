@@ -1,40 +1,30 @@
-from pathlib import Path
 import json
+
 import numpy as np
-import time
-import folium
-from matplotlib.colors import LinearSegmentedColormap, ListedColormap
 import matplotlib.pyplot as plt
+import matplotlib as mpl
+
 import streamlit as st
 import leafmap.foliumap as leafmap
-import leafmap.colormaps as cm
-
-import matplotlib as mpl
-import numpy
-from rio_tiler.colormap import cmap
 from streamlit_folium import st_folium
+
 
 def display_map(map_secrets):
     m = leafmap.Map(
-        locate_control=True,
-        latlon_control=True,
         minimap_control=True,
-        center=map_secrets["coords"],
-        zoom=map_secrets["zoom"],
     )
 
     colors_dict = get_colormap()
 
     m.add_cog_layer(
-        "https://magisterkacog.blob.core.windows.net/cogs/4_4_cdom_20230409_cog_next.tif",
+        "https://magisterkacog.blob.core.windows.net/cogs/4_4_cdom_20230409_cog.tif",
         name=str(st.session_state.layer),
         nodata=0,
         colormap=f"{json.dumps(colors_dict)}",
-        # colormap_name = "ndvi".lower(),
         bidx=1,
         rescale="0,255",
     )
-    print(map_secrets)
+
     folium_map = st_folium(
         m,
         width=None,
@@ -42,29 +32,24 @@ def display_map(map_secrets):
         center=map_secrets["coords"],
         zoom=map_secrets["zoom"],
     )
-    print(folium_map)
+
     return folium_map
+
 
 @st.cache_data
 def get_colormap():
     cmap = mpl.cm.YlOrRd
-    max_for_each_class = [5, 20, 50, 100, 1000]
-    for_pixels = np.interp(max_for_each_class, (0, 1000), (1, 255), right=0, left=0)
 
     scalar_mappable = mpl.cm.ScalarMappable(cmap=cmap).to_rgba(
-        np.arange(0, 1.0001, 1 / (len(max_for_each_class) - 1)), alpha=True, bytes=False
+        np.arange(1, 6, 1), alpha=True, bytes=False
     )
 
     colors_dict = {}
-    pixel_values = list(range(1, 20))
-    for pixel in pixel_values:
-        for i in range(0, len(max_for_each_class)):
-            if pixel <= for_pixels[i]:
-                colors_dict[pixel] = mpl.colors.rgb2hex(
-                    scalar_mappable[i], keep_alpha=False
-                )
-                break
+    pixel_values = list(range(1, 6))
+    for idx, pixel in enumerate(pixel_values):
+        colors_dict[pixel] = mpl.colors.rgb2hex(scalar_mappable[idx], keep_alpha=False)
     return colors_dict
+
 
 st.title("Normalized Multi-Band Drought Index")
 
@@ -92,10 +77,6 @@ st.session_state["layer"] = widget.select_slider(
 
 row1_col1, row1_col2 = st.columns([7, 1])
 
-palette_name = "YlOrRd"
-vmin_value = 0
-vmax_value = 1000
-
 with row1_col1:
     map = display_map(st.session_state.map_secrets)
     if "center" in map:
@@ -105,33 +86,11 @@ with row1_col1:
         }
 
 with row1_col2:
-    colors = ['#ffffcc', '#fed976', '#fd8c3c', '#e2191c',]
-    # get_colormap()
-    
+    colors = list(get_colormap().values())
     fig, ax = plt.subplots(figsize=(1, 4))
     norm = mpl.colors.Normalize(vmin=0, vmax=1000)
-    col_map = ListedColormap(name="NDVI", colors=list(colors), N=4)
-    cb = mpl.colorbar.ColorbarBase(
-        ax, norm=norm, cmap=col_map
-    )
-    ax.set_yticks([0,250,500, 750, 1000], labels=[0, 20, 50, 100, 1000])
-    
-    # if show_name:
-    #     pos = list(ax.get_position().bounds)
-    #     x_text = pos[0] - 0.01
-    #     y_text = pos[1] + pos[3] / 2.0
-    #     fig.text(x_text, y_text, cmap, va="center", ha="right", fontsize=font_size)
+    col_map = mpl.colors.ListedColormap(name="NDVI", colors=list(colors), N=5)
+    cb = mpl.colorbar.ColorbarBase(ax, norm=norm, cmap=col_map)
+    ax.set_yticks([0, 200, 400, 600, 800, 1000], labels=[0, 5, 20, 50, 100, 1000])
 
-    st.write(
-        fig
-        # cm.create_colormap(
-        #     palette_name,
-        #     # label=selected_col.replace("_", " ").title(),
-        #     width=1,
-        #     height=3,
-        #     orientation="vertical",
-        #     vmin=vmin_value,
-        #     vmax=vmax_value,
-        #     font_size=10,
-        # )
-    )
+    st.write(fig)
