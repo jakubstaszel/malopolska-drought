@@ -1,10 +1,22 @@
 from .task import run
+from .task_boleslaw import run_boleslaw
+from .task_check_clouds_coverage import run_check_clouds_coverage
 import argparse
 from datetime import datetime
 
 
 def cli() -> None:
     parser = argparse.ArgumentParser(description="Process new satellite imagery.")
+
+    parser.add_argument(
+        "--task-name",
+        "-tn",
+        action="store",
+        choices=["task", "boleslaw", "clouds"],
+        required=True,
+        type=str,
+        dest="task_name",
+    )
     parser.add_argument(
         "--from",
         "-f",
@@ -24,4 +36,9 @@ def cli() -> None:
 
     args = parser.parse_args()
 
-    run(args.sentinel_from, args.sentinel_to)
+    if args.task_name == "task":
+        run(args.sentinel_from, args.sentinel_to)
+    elif args.task_name == "boleslaw":
+        run_boleslaw(args.sentinel_from, args.sentinel_to)
+    elif args.task_name == "clouds":
+        run_check_clouds_coverage(args.sentinel_from, args.sentinel_to)

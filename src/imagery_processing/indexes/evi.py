@@ -21,7 +21,20 @@ def evi(product: str, B02: Path, B04: Path, B08: Path, output_folder: Path) -> P
     B08[B08 <= 0] = np.nan
     B02[B02 <= 0] = np.nan
 
-    evi = np.divide((B08 - B04), (B08 + (6 * B04) - (7.5 * B02) + 1)) * 2.5
+    evi = np.multiply(
+        np.divide(
+            np.subtract(B08, B04),
+            (
+                np.add(
+                    np.subtract(
+                        np.add(B08, np.multiply(6, B04)), np.multiply(7.5, B02)
+                    ),
+                    1,
+                )
+            ),
+        ),
+        2.5,
+    )
 
     # evi[evi < 0] = np.nan
     # evi[evi > 100] = np.nan

@@ -13,27 +13,34 @@ from shapely.geometry import Polygon
 def detect_clouds(
     product: str, cloud_classif_dir: Path, cloud_prob_dir: Path, output_folder: Path
 ) -> Path:
+    print("    Detecting clouds for", product)
+
     clouds_series = gpd.GeoSeries(dtype=object)
 
-    clouds_prob = rasterio.open(cloud_prob_dir).read(1).astype("int")
-    with rasterio.open(cloud_classif_dir) as clouds_init:
-        # resample data to target shape
-        clouds = clouds_init.read(
-            out_shape=(
-                clouds_init.count,
-                int(clouds_init.height * 3),
-                int(clouds_init.width * 3),
-            ),
-            resampling=Resampling.bilinear,
-        ).astype("int")[0]
+    if cloud_prob_dir:
+        clouds_prob = rasterio.open(cloud_prob_dir).read(1).astype("int")
+        # if probability of cloud > 20% then it is cloud
+        clouds_prob[clouds_prob <= 5] = 0
+        clouds_prob[clouds_prob > 5] = 1
 
-    # if probability of cloud > 20% then it is cloud
-    clouds_prob[clouds_prob <= 20] = 0
-    clouds_prob[clouds_prob > 20] = 1
+        clouds = clouds_prob
+
+    if cloud_classif_dir:
+        with rasterio.open(cloud_classif_dir) as clouds_init:
+            # resample data to target shape
+            clouds_class = clouds_init.read(
+                out_shape=(
+                    clouds_init.count,
+                    int(clouds_init.height * 3),
+                    int(clouds_init.width * 3),
+                ),
+                resampling=Resampling.bilinear,
+            ).astype("int")[0]
+
+            clouds = clouds + clouds_class
 
     # possible values [0, 1, 2]
     # 1 or 2 - cloud on 1 or 2 products
-    clouds = clouds_prob + clouds
     clouds[clouds < 1] = 0
     clouds[clouds >= 1] = 1
 
