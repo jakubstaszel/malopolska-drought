@@ -42,24 +42,17 @@ from src.imagery_processing.mask import masking, masking_aoi
 
 from src.db_client.models.files import File
 
-# around Boleslaw mining sites
+# Roznowskie lake in Małopolska
 POLYGON: Final = [
-    [19.700705772907838, 50.412751801438958],
-    [19.272261488161291, 50.514547586387039],
-    [19.113125039541046, 50.303868968171855],
-    [19.687175953389556, 50.145376796670575],
-    [19.700705772907838, 50.412751801438958],
+    [20.639198280192943, 49.689258119589113],
+    [20.749934447137491, 49.689258119589113],
+    [20.749934447137491, 49.768078665670942],
+    [20.639198280192943, 49.768078665670942],
+    [20.639198280192943, 49.689258119589113],
 ]
 
-WATER_INDEXES: Final = {}
-DROUGHT_INDEXES: Final = {
-    "ndwi": [],
-    "nmdi": [],
-    "ndmi": [],
-    "ndvi": [],
-    "wdrvi": [],
-    "evi": [],
-}
+WATER_INDEXES: Final = {"cdom": [], "turb": [], "doc": [], "chla": [], "cya": []}
+DROUGHT_INDEXES: Final = {}
 ALL_INDEXES: Final = {**WATER_INDEXES, **DROUGHT_INDEXES}
 
 
@@ -87,10 +80,18 @@ def run_boleslaw(
         if_polygon_inside_image=True,
     )
 
-    timestamp = products_df["generationdate"].mean()
-
     # ------------------------------------------------------------------------------------ download new satellite imagery
     if not products_df is None:
+        # imagery before 2021 have no generationdate field
+        if "generationdate" not in products_df:
+            products_df["generationdate"] = products_df["filename"].apply(
+                lambda x: datetime.strptime(
+                    x.split("_")[-1].split(".")[0], "%Y%m%dT%H%M%S"
+                )
+            )
+
+        timestamp = products_df["generationdate"].mean()
+
         downloaded = data_download_2A(
             check_folder(Path.cwd().joinpath("data", "download")), products_df
         )
@@ -106,6 +107,41 @@ def run_boleslaw(
             bands = bands_2A(folder)
 
             # ------------------------------------------------------------------------------------ calculate indexes
+            if "cdom" in indexes.keys():
+                indexes["cdom"].append(
+                    cdom(folder.name, bands["b03_10m"], bands["b04_10m"], output_folder)
+                )
+
+            if "turb" in indexes.keys():
+                indexes["turb"].append(
+                    turbidity(
+                        folder.name, bands["b03_60m"], bands["b01_60m"], output_folder
+                    )
+                )
+
+            if "doc" in indexes.keys():
+                indexes["doc"].append(
+                    doc(folder.name, bands["b03_10m"], bands["b04_10m"], output_folder)
+                )
+
+            if "chla" in indexes.keys():
+                indexes["chla"].append(
+                    chl_a(
+                        folder.name, bands["b03_60m"], bands["b01_60m"], output_folder
+                    )
+                )
+
+            if "cya" in indexes.keys():
+                indexes["cya"].append(
+                    cya(
+                        folder.name,
+                        bands["b03_10m"],
+                        bands["b04_10m"],
+                        bands["b02_10m"],
+                        output_folder,
+                    )
+                )
+
             if "ndwi" in indexes.keys():
                 indexes["ndwi"].append(
                     ndwi(
@@ -230,7 +266,7 @@ def run_boleslaw(
                 "src",
                 "imagery_processing",
                 "geoms_for_merging",
-                "boleslaw.shp",
+                "jezioro_roznowskie.shp",
             )
         )
         output_folder = check_folder(

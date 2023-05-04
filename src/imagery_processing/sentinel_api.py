@@ -1,5 +1,5 @@
 import os
-from typing import Union, List
+from typing import Union, List, Tuple
 from settings import OAH_LOGIN, OAH_PASSWORD
 import datetime as dt
 from pathlib import Path
@@ -9,7 +9,7 @@ from shapely.geometry import Polygon
 import geopandas
 
 from sentinelsat import SentinelAPI, read_geojson, geojson_to_wkt, make_path_filter
-from sentinelsat.exceptions import InvalidChecksumError
+from sentinelsat.exceptions import InvalidChecksumError, ServerError
 from requests.exceptions import HTTPError
 import zipfile
 
@@ -22,9 +22,18 @@ def _update_lastRefresh_file(datetime: dt.datetime) -> None:
 
 def _any_product_offline(api, products_df) -> bool:
     is_any_offline = False
+    i = 0
+    api_idx = 0
+    login = ["jsta", "jsta2", "jsta3"]
+    passw = ["Kom987ik!", "Kom987ik!", "Kom987ik!"]
+    
     for product in products_df.iterrows():
         is_online = api.is_online(product[1]["uuid"])
         if not is_online:
+            if i in [20, 40, 60]:
+                api = SentinelAPI(login[api_idx], passw[api_idx], "https://scihub.copernicus.eu/dhus")
+                api_idx = api_idx + 1
+            i = i + 1
             is_any_offline = True
             api.trigger_offline_retrieval(product[1]["uuid"])
             print(
@@ -43,6 +52,7 @@ def data_check_2A(
     sen_from: Union[dt.datetime, None],
     sen_to: Union[dt.datetime, None],
     if_polygon_inside_image: bool = False,
+    clouds_coverage_percentage: Tuple = (0,100)
 ) -> pd.DataFrame:
     """
     Calls Sentinel API to find new 2A products.
@@ -82,14 +92,11 @@ def data_check_2A(
         date=date,
         platformname="Sentinel-2",
         processinglevel="Level-2A",
-        cloudcoverpercentage=(0, 100),
+        cloudcoverpercentage=clouds_coverage_percentage,
         area_relation=area_relation,
     )
 
     products_df = api.to_dataframe(products)
-
-    if _any_product_offline(api, products_df):
-        return None
 
     if products_df.empty:
         print("    No new products found")
@@ -109,6 +116,9 @@ def data_check_2A(
             avgClouds += product[1]["cloudcoverpercentage"]
         avgClouds = avgClouds / len(products_df)
         print("Avg clouds coverage: ", avgClouds)
+
+        if _any_product_offline(api, products_df):
+            return None
 
     os.chdir(home)
     return products_df
@@ -142,7 +152,7 @@ def data_download_2A(folder: Path, products_df) -> List[Path]:
         os.chdir(home)
         return downloaded
 
-    except (InvalidChecksumError, HTTPError) as e:
+    except (InvalidChecksumError, HTTPError, ServerError) as e:
         print(e)
         os.chdir(home)
         print("Trying one more time: ")
@@ -160,13 +170,9 @@ def data_download_clouds_bands(folder: Path, products_df) -> List[Path]:
             print(
                 "Now downloading clouds bands: ", product[1]["filename"]
             )  # filename of the product
-            path_filter = make_path_filter("*MSK_CLASSI_B00.jp2")
-            api.download(
-                product[1]["uuid"], nodefilter=path_filter
-            )  # download the product using uuid
-            path_filter = make_path_filter("*MSK_CLDPRB_20m.jp2")
-            api.download(
-                product[1]["uuid"], nodefilter=path_filter
+            path_filter = make_path_filter("*MSK_CL[DA][PS][RS][BI]_[2B]0[m0].jp2")
+            api.download_all(
+                [product[1]["uuid"]], nodefilter=path_filter
             )  # download the product using uuid
 
             downloaded.append(folder.joinpath(product[1]["filename"]))
@@ -174,7 +180,7 @@ def data_download_clouds_bands(folder: Path, products_df) -> List[Path]:
         os.chdir(home)
         return downloaded
 
-    except (InvalidChecksumError, HTTPError) as e:
+    except (InvalidChecksumError, HTTPError, ServerError) as e:
         print(e)
         os.chdir(home)
         print("Trying one more time: ")

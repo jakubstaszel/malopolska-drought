@@ -15,13 +15,13 @@ from src.imagery_processing.sentinel_api import (
 # clouds
 from src.imagery_processing.detect_clouds import detect_clouds
 
-# around Boleslaw mining sites
+# Roznowskie lake in Małopolska
 POLYGON: Final = [
-    [19.700705772907838, 50.412751801438958],
-    [19.272261488161291, 50.514547586387039],
-    [19.113125039541046, 50.303868968171855],
-    [19.687175953389556, 50.145376796670575],
-    [19.700705772907838, 50.412751801438958],
+    [20.639198280192943, 49.689258119589113],
+    [20.749934447137491,49.689258119589113],
+    [20.749934447137491,49.768078665670942],
+    [20.639198280192943,49.768078665670942],
+    [20.639198280192943,49.689258119589113],
 ]
 
 
@@ -77,7 +77,7 @@ def run_check_clouds_coverage(
                     "src",
                     "imagery_processing",
                     "geoms_for_merging",
-                    "boleslaw.shp",
+                    "jezioro_roznowskie.shp",
                 )
             )
             clouds = geopandas.read_file(clouds_file)
