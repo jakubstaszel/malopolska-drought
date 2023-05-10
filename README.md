@@ -31,5 +31,9 @@ If you want to install any new package:
 
 `python -m tools.start_api -prod`
 
+5. Start web application:
+
+`python -m tools.start_web_app`
+
 ## Formatting files
 For formatting your files, please use black library e.g. `black .\tools\create_database\cli.py`
