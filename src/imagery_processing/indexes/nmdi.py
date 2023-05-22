@@ -9,6 +9,8 @@ import rasterio
 def nmdi(product: str, B08: Path, B11: Path, B12: Path, output_folder: Path) -> Path:
     """
     Calculates Normalized Multi-Band Drought Index.
+
+    https://agupubs.onlinelibrary.wiley.com/doi/full/10.1029/2007gl031021
     """
     print("    Calculating NMDI for", product)
     # opening one of bands in separated to retrieve metadata to later save the raster
@@ -36,6 +38,7 @@ def nmdi(product: str, B08: Path, B11: Path, B12: Path, output_folder: Path) -> 
     B11B12 = B11 - B12
 
     nmdi = np.divide(B08 - B11B12, B08 + B11B12)
+    nmdi[(nmdi == np.inf) | (nmdi == -np.inf)] = np.nan
 
     # normalized, values from 0 to 1 are the only reasonable
     nmdi[nmdi < 0] = np.nan

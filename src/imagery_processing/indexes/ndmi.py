@@ -10,6 +10,9 @@ def ndmi(product: str, B08: Path, B11: Path, output_folder: Path) -> Path:
     """
     Calculates Normalized Difference Moisture Index.
 
+    https://www.usgs.gov/landsat-missions/normalized-difference-moisture-index
+    https://eos.com/make-an-analysis/ndmi/
+
     """
     print("    Calculating NDMI for", product)
     # opening one of bands in separated to retrieve metadata to later save the raster
@@ -33,8 +36,9 @@ def ndmi(product: str, B08: Path, B11: Path, output_folder: Path) -> Path:
     B11[B11 <= 0] = np.nan
 
     ndmi = np.divide((B08 - B11), (B08 + B11))
+    ndmi[(ndmi == np.inf) | (ndmi == -np.inf)] = np.nan
 
-    ndmi[ndmi < 0] = np.nan
+    ndmi[ndmi < -1] = np.nan
     ndmi[ndmi > 1] = np.nan
 
     dst_crs = "EPSG:3857"

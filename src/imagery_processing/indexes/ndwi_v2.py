@@ -6,37 +6,41 @@ from rasterio.warp import calculate_default_transform
 import rasterio
 
 
-def ndvi(product: str, B04: Path, B08: Path, output_folder: Path) -> Path:
+def ndwi2(product: str, B03: Path, B08: Path, output_folder: Path) -> Path:
     """
-    Calculates Normalized Difference Vegetation Index.
+    Calculates Normalized Difference Water Index.
+
+    https://eos.com/make-an-analysis/ndwi/
+
     """
-    print("    Calculating NDVI for", product)
+    print("    Calculating NDWI v2 for", product)
     # opening one of bands in separated to retrieve metadata to later save the raster
-    srcB04 = rasterio.open(B04)
-    B04 = srcB04.read().astype("f4")
+    srcB03 = rasterio.open(B03)
+    B03 = srcB03.read().astype("f4")
     B08 = rasterio.open(B08).read().astype("f4")
 
+    B03[B03 <= 0] = np.nan
     B08[B08 <= 0] = np.nan
-    B04[B04 <= 0] = np.nan
 
-    ndvi = np.divide((B08 - B04), (B08 + B04))
-    ndvi[(ndvi == np.inf) | (ndvi == -np.inf)] = np.nan
+    ndwi = np.divide((B03 - B08), (B03 + B08))
+    ndwi[(ndwi == np.inf) | (ndwi == -np.inf)] = np.nan
 
-    ndvi[ndvi < -1] = np.nan
-    ndvi[ndvi > 1] = np.nan
+    ndwi[ndwi < -1] = np.nan
+    ndwi[ndwi > 1] = np.nan
 
     dst_crs = "EPSG:3857"
     transform, wid, hei = calculate_default_transform(
-        srcB04.crs, dst_crs, srcB04.width, srcB04.height, *srcB04.bounds
+        srcB03.crs, dst_crs, srcB03.width, srcB03.height, *srcB03.bounds
     )
-    kwargs = srcB04.meta.copy()
+
+    kwargs = srcB03.meta.copy()
     kwargs.update(driver="GTiff", dtype=rasterio.float32, count=1, compress="lzw")
 
     home = Path.cwd()
     os.chdir(output_folder)
-    name = "ndvi_"
+    name = "ndwi2_"
     with rasterio.open(name + product + ".tif", "w", **kwargs) as dst:
-        dst.write(ndvi.astype(rasterio.float32))
+        dst.write(ndwi.astype(rasterio.float32))
 
     os.chdir(home)
 
