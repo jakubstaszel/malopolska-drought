@@ -20,18 +20,30 @@ def _update_lastRefresh_file(datetime: dt.datetime) -> None:
     fileRefresh.close()
 
 
-def _any_product_offline(api, products_df) -> bool:
+def check_and_trigger_offline_retrieval(products_df) -> bool:
+    api = SentinelAPI(
+        OAH_LOGIN[0], OAH_PASSWORD[0], "https://scihub.copernicus.eu/dhus"
+    )
+
     is_any_offline = False
     i = 0
     api_idx = 0
-    login = ["jsta", "jsta2", "jsta3"]
-    passw = ["Kom987ik!", "Kom987ik!", "Kom987ik!"]
-    
+    login = OAH_LOGIN[1:]
+    passw = OAH_PASSWORD[1:]
+
+    switch_credentials_idx = []
+    for cred in login:
+        idx = 20
+        switch_credentials_idx.append(idx)
+        idx = idx + 20
+
     for product in products_df.iterrows():
         is_online = api.is_online(product[1]["uuid"])
         if not is_online:
-            if i in [20, 40, 60]:
-                api = SentinelAPI(login[api_idx], passw[api_idx], "https://scihub.copernicus.eu/dhus")
+            if i in switch_credentials_idx:
+                api = SentinelAPI(
+                    login[api_idx], passw[api_idx], "https://scihub.copernicus.eu/dhus"
+                )
                 api_idx = api_idx + 1
             i = i + 1
             is_any_offline = True
@@ -51,17 +63,35 @@ def data_check_2A(
     polygon: Polygon,
     sen_from: Union[dt.datetime, None],
     sen_to: Union[dt.datetime, None],
-    if_polygon_inside_image: bool = False,
-    clouds_coverage_percentage: Tuple = (0,100)
+    identifier: str = "*",
+    if_whole_polygon_inside_image: bool = False,
+    clouds_coverage_percentage: Tuple = (0, 100),
+    check_LTA: bool = False,
 ) -> pd.DataFrame:
     """
     Calls Sentinel API to find new 2A products.
     Return dataframe with products found.
+
+    Parameters
+    ----------
+    identifier: str, optional, default to "*" meaning no filter on this field
+        This parameter is used when you want to filter results by some kind of
+        name pattern. As an example, if you want to download imagery for Sentinel 2,
+        but only from 2B and for 2 locations you can use {"S2B*T34UDA*", "S2B*T34UEA*"}.
+
+    if_whole_polygon_inside_image: bool, default to False, if you switch to True,
+        only images which contains the whole polygon on the image will be returned.
+
+    check_LTA: bool, default False, if True, it is checking if any product is in
+        Long Term Archive, if yes, then it is triggering retrieval. You will
+        have to wait a few hours for it to be ready to be downloaded.
     """
     home = Path.cwd()
     os.chdir(folder)
 
-    api = SentinelAPI(OAH_LOGIN, OAH_PASSWORD, "https://scihub.copernicus.eu/dhus")
+    api = SentinelAPI(
+        OAH_LOGIN[0], OAH_PASSWORD[0], "https://scihub.copernicus.eu/dhus"
+    )
     footprint = geopandas.GeoSeries([polygon]).to_wkt()[0]
 
     if sen_from and sen_to:
@@ -82,7 +112,7 @@ def data_check_2A(
             f"Searching for satellite imagery from {dt.datetime.now() - dt.timedelta(days=4)} to {dt.datetime.now()}"
         )
 
-    if if_polygon_inside_image == True:
+    if if_whole_polygon_inside_image == True:
         area_relation = "Contains"
     else:
         area_relation = "Intersects"  # - it is by default
@@ -92,6 +122,7 @@ def data_check_2A(
         date=date,
         platformname="Sentinel-2",
         processinglevel="Level-2A",
+        identifier=identifier,
         cloudcoverpercentage=clouds_coverage_percentage,
         area_relation=area_relation,
     )
@@ -117,8 +148,9 @@ def data_check_2A(
         avgClouds = avgClouds / len(products_df)
         print("Avg clouds coverage: ", avgClouds)
 
-        if _any_product_offline(api, products_df):
-            return None
+        if check_LTA:
+            if check_and_trigger_offline_retrieval(products_df):
+                return None
 
     os.chdir(home)
     return products_df
@@ -132,7 +164,9 @@ def data_download_2A(folder: Path, products_df) -> List[Path]:
     """
     home = Path.cwd()
     os.chdir(folder)
-    api = SentinelAPI(OAH_LOGIN, OAH_PASSWORD, "https://scihub.copernicus.eu/dhus")
+    api = SentinelAPI(
+        OAH_LOGIN[0], OAH_PASSWORD[0], "https://scihub.copernicus.eu/dhus"
+    )
 
     try:
         downloaded = []
@@ -162,7 +196,9 @@ def data_download_2A(folder: Path, products_df) -> List[Path]:
 def data_download_clouds_bands(folder: Path, products_df) -> List[Path]:
     home = Path.cwd()
     os.chdir(folder)
-    api = SentinelAPI(OAH_LOGIN, OAH_PASSWORD, "https://scihub.copernicus.eu/dhus")
+    api = SentinelAPI(
+        OAH_LOGIN[0], OAH_PASSWORD[0], "https://scihub.copernicus.eu/dhus"
+    )
     try:
         downloaded = []
         for product in products_df.iterrows():
