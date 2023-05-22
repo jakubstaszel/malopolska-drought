@@ -17,6 +17,7 @@ def bands_2A(folder: Path) -> dict:
         "b03_10m": None,
         "b04_10m": None,
         "b08_10m": None,
+        "b8a_20m": None,
         "b11_20m": None,
         "b12_20m": None,
         "b01_60m": None,
@@ -37,6 +38,8 @@ def bands_2A(folder: Path) -> dict:
                 bands["b02_10m"] = Path(root).joinpath(file)
             if file.endswith("_B08_10m.jp2"):
                 bands["b08_10m"] = Path(root).joinpath(file)
+            if file.endswith("_B8A_20m.jp2"):
+                bands["b8a_20m"] = Path(root).joinpath(file)
             if file.endswith("_B11_20m.jp2"):
                 bands["b11_20m"] = Path(root).joinpath(file)
             if file.endswith("_B12_20m.jp2"):
