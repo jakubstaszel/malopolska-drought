@@ -8,7 +8,7 @@ import geopandas
 
 from src.imagery_processing.get_bands import bands_2A
 from src.imagery_processing.sentinel_api import (
-    data_check_2A,
+    data_check,
     data_download_clouds_bands,
 )
 
@@ -18,10 +18,10 @@ from src.imagery_processing.detect_clouds import detect_clouds
 # Roznowskie lake in Małopolska
 POLYGON: Final = [
     [20.639198280192943, 49.689258119589113],
-    [20.749934447137491,49.689258119589113],
-    [20.749934447137491,49.768078665670942],
-    [20.639198280192943,49.768078665670942],
-    [20.639198280192943,49.689258119589113],
+    [20.749934447137491, 49.689258119589113],
+    [20.749934447137491, 49.768078665670942],
+    [20.639198280192943, 49.768078665670942],
+    [20.639198280192943, 49.689258119589113],
 ]
 
 
@@ -41,12 +41,14 @@ def run_check_clouds_coverage(
     This task supports only AOIs that are inside one imagery.
     """
     # -------------------------------------- find new products
-    products_df = data_check_2A(
+    products_df = data_check(
         check_folder(Path.cwd().joinpath("data", "download")),
         Polygon(POLYGON),
         sen_from,
         sen_to,
         if_polygon_inside_image=True,
+        clouds_coverage_percentage=(0, 85),
+        check_LTA=True,
     )
 
     # -------------------------------------- download bands for clouds

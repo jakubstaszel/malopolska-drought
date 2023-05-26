@@ -58,18 +58,19 @@ def check_and_trigger_offline_retrieval(products_df) -> bool:
         return False
 
 
-def data_check_2A(
+def data_check(
     folder: Path,
     polygon: Polygon,
     sen_from: Union[dt.datetime, None],
     sen_to: Union[dt.datetime, None],
+    processing_level: str = "Level-2A", 
     identifier: str = "*",
     if_whole_polygon_inside_image: bool = False,
     clouds_coverage_percentage: Tuple = (0, 100),
     check_LTA: bool = False,
 ) -> pd.DataFrame:
     """
-    Calls Sentinel API to find new 2A products.
+    Calls Sentinel API to find new products.
     Return dataframe with products found.
 
     Parameters
@@ -121,7 +122,7 @@ def data_check_2A(
         footprint,
         date=date,
         platformname="Sentinel-2",
-        processinglevel="Level-2A",
+        processinglevel=processing_level,
         identifier=identifier,
         cloudcoverpercentage=clouds_coverage_percentage,
         area_relation=area_relation,
@@ -156,7 +157,7 @@ def data_check_2A(
     return products_df
 
 
-def data_download_2A(folder: Path, products_df) -> List[Path]:
+def data_download(folder: Path, products_df) -> List[Path]:
     """
     Downloads and unzips products found.
     Reguires data returned from dataCheck() function and lastRefresh.txt file in HOMEdir.
@@ -190,7 +191,7 @@ def data_download_2A(folder: Path, products_df) -> List[Path]:
         print(e)
         os.chdir(home)
         print("Trying one more time: ")
-        data_download_2A(folder, products_df)
+        data_download(folder, products_df)
 
 
 def data_download_clouds_bands(folder: Path, products_df) -> List[Path]:

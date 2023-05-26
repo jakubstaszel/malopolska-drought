@@ -5,7 +5,8 @@ from shutil import rmtree
 from copy import deepcopy
 
 from shapely.geometry import Polygon
-import geopandas
+import geopandas as gpd
+import pandas as pd
 
 from src.imagery_processing.get_bands import bands_2A
 from src.imagery_processing.sentinel_api import data_check, data_download
@@ -18,12 +19,15 @@ from src.imagery_processing.indexes.chl_a import chl_a
 from src.imagery_processing.indexes.cya import cya
 
 # drought indexes
+from src.imagery_processing.indexes.ndwi_v1 import ndwi1
 from src.imagery_processing.indexes.ndwi_v2 import ndwi2
 from src.imagery_processing.indexes.nmdi import nmdi
 from src.imagery_processing.indexes.ndmi import ndmi
 from src.imagery_processing.indexes.ndvi import ndvi
 from src.imagery_processing.indexes.wdrvi import wdrvi
 from src.imagery_processing.indexes.evi import evi
+from src.imagery_processing.indexes.msavi2 import msavi2
+from src.imagery_processing.indexes.msi import msi
 
 # clouds
 from src.imagery_processing.detect_clouds import detect_clouds
@@ -44,15 +48,37 @@ from src.db_client.models.files import File
 
 # Roznowskie lake in Małopolska
 POLYGON: Final = [
-    [20.639198280192943, 49.689258119589113],
-    [20.749934447137491, 49.689258119589113],
-    [20.749934447137491, 49.768078665670942],
-    [20.639198280192943, 49.768078665670942],
-    [20.639198280192943, 49.689258119589113],
+    [19.091504869414848, 49.971660199797157],
+    [19.661907963059775, 49.402238702643217],
+    [19.790343096728236, 49.195316426684997],
+    [20.08121089944791, 49.182972223535046],
+    [20.300306127470606, 49.370271832411788],
+    [20.708276552064262, 49.385028356961811],
+    [20.950036803675232, 49.29149552756877],
+    [21.274902141777716, 49.429271349061253],
+    [21.422224795103205, 49.436641305065848],
+    [21.206907071012097, 50.354001512810328],
+    [20.776271622829938, 50.291294753773286],
+    [20.655391497024198, 50.192242879005676],
+    [20.417408749344588, 50.201915538359515],
+    [20.23986606456765, 50.495990864248427],
+    [19.975440789368065, 50.508004295927549],
+    [19.507030301871396, 50.406996472399328],
+    [19.091504869414848, 49.971660199797157],
 ]
 
-WATER_INDEXES: Final = {"cdom": [], "turb": [], "doc": [], "chla": [], "cya": []}
-DROUGHT_INDEXES: Final = {}
+WATER_INDEXES: Final = {}
+DROUGHT_INDEXES: Final = {
+    "ndwi1": [],
+    "ndwi2": [],
+    "nmdi": [],
+    "ndmi": [],
+    "ndvi": [],
+    "wdrvi": [],
+    "evi": [],
+    "msavi2": [],
+    "msi": [],
+}
 ALL_INDEXES: Final = {**WATER_INDEXES, **DROUGHT_INDEXES}
 
 
@@ -65,21 +91,36 @@ def delete_folder_with_all_files(folder: Path):
     rmtree(folder)
 
 
-def run_boleslaw(
+def run_malopolska(
     sen_from: Union[datetime, None], sen_to: Union[datetime, None]
 ) -> None:
     """
     This task supports only AOIs that are inside one imagery.
     """
     # ------------------------------------------------------------------------------------ find new products
+    sate = "S2A"
+    identifier = {
+        sate + "*T34UCV*",
+        sate + "*T34UCA*",
+        sate + "*T34UEA*",
+        sate + "*T34UDV*",
+        sate + "*T34UDA*",
+        sate + "*T34UEV*",
+    }
+    # identifier = "*34UDA*"
     products_df = data_check(
         check_folder(Path.cwd().joinpath("data", "download")),
         Polygon(POLYGON),
         sen_from,
         sen_to,
-        if_polygon_inside_image=True,
+        identifier=identifier,
         check_LTA=True,
+        processing_level="Level-1C"
     )
+
+    if len(products_df) != 6:
+        raise ValueError("Time range is too wide or too narrow")
+    print(len(products_df))
 
     # ------------------------------------------------------------------------------------ download new satellite imagery
     if not products_df is None:
@@ -90,7 +131,6 @@ def run_boleslaw(
                     x.split("_")[-1].split(".")[0], "%Y%m%dT%H%M%S"
                 )
             )
-
         timestamp = products_df["generationdate"].mean()
 
         downloaded = data_download(
@@ -140,6 +180,13 @@ def run_boleslaw(
                         bands["b04_10m"],
                         bands["b02_10m"],
                         output_folder,
+                    )
+                )
+
+            if "ndwi1" in indexes.keys():
+                indexes["ndwi1"].append(
+                    ndwi1(
+                        folder.name, bands["b8a_20m"], bands["b12_20m"], output_folder
                     )
                 )
 
@@ -205,6 +252,26 @@ def run_boleslaw(
                     )
                 )
 
+            if "msavi2" in indexes.keys():
+                indexes["msavi2"].append(
+                    msavi2(
+                        folder.name,
+                        bands["b04_10m"],
+                        bands["b08_10m"],
+                        output_folder,
+                    )
+                )
+
+            if "msi" in indexes.keys():
+                indexes["msi"].append(
+                    msi(
+                        folder.name,
+                        bands["b8a_20m"],
+                        bands["b11_20m"],
+                        output_folder,
+                    )
+                )
+
             # ------------------------------------------------------------------------------------ detect clouds
             detected_clouds.append(
                 detect_clouds(
@@ -245,7 +312,12 @@ def run_boleslaw(
 
         # ------------------------------------------------------------------------------------ mask rasters with clouds
         masked_clouds = deepcopy(ALL_INDEXES)
-        clouds = geopandas.read_file(detected_clouds[0])
+        clouds = []
+        for file in detected_clouds:
+            clouds.append(gpd.read_file(file))
+        clouds = pd.concat(clouds, ignore_index=True)
+        clouds = clouds.dissolve().explode(ignore_index=True)
+
         output_folder = check_folder(Path.cwd().joinpath("data", "merged_cloudsMasked"))
 
         for key in indexes_merged.keys():
@@ -262,12 +334,12 @@ def run_boleslaw(
 
         # ------------------------------------------------------------------------------------ mask rasters with AOI
         masked_aoi = deepcopy(ALL_INDEXES)
-        aoi = geopandas.read_file(
+        aoi = gpd.read_file(
             Path.cwd().joinpath(
                 "src",
                 "imagery_processing",
                 "geoms_for_merging",
-                "jezioro_roznowskie.shp",
+                "malopolska.shp",
             )
         )
         output_folder = check_folder(

@@ -8,7 +8,7 @@ from shapely.geometry import Polygon
 import geopandas
 
 from src.imagery_processing.get_bands import bands_2A
-from src.imagery_processing.sentinel_api import data_check_2A, data_download_2A
+from src.imagery_processing.sentinel_api import data_check, data_download
 
 # water indexes
 from src.imagery_processing.indexes.cdom import cdom
@@ -18,7 +18,7 @@ from src.imagery_processing.indexes.chl_a import chl_a
 from src.imagery_processing.indexes.cya import cya
 
 # drought indexes
-from src.imagery_processing.indexes.ndwi import ndwi
+from src.imagery_processing.indexes.ndwi_v2 import ndwi2
 from src.imagery_processing.indexes.nmdi import nmdi
 from src.imagery_processing.indexes.ndmi import ndmi
 from src.imagery_processing.indexes.ndvi import ndvi
@@ -57,7 +57,7 @@ POLYGON: Final = [
 
 WATER_INDEXES: Final = {"cdom": [], "turb": [], "doc": [], "chla": [], "cya": []}
 DROUGHT_INDEXES: Final = {
-    "ndwi": [],
+    "ndwi2": [],
     "nmdi": [],
     "ndmi": [],
     "ndvi": [],
@@ -78,18 +78,19 @@ def delete_folder_with_all_files(folder: Path):
 
 def run(sen_from: Union[datetime, None], sen_to: Union[datetime, None]) -> None:
     # find new products
-    products_df = data_check_2A(
+    products_df = data_check(
         check_folder(Path.cwd().joinpath("data", "download")),
         Polygon(POLYGON),
         sen_from,
         sen_to,
+        check_LTA=True,
     )
 
     timestamp = products_df["generationdate"].mean()
 
     # # download new satellite imagery
     if not products_df.empty:
-        downloaded = data_download_2A(
+        downloaded = data_download(
             check_folder(Path.cwd().joinpath("data", "download")), products_df
         )
 
@@ -127,8 +128,8 @@ def run(sen_from: Union[datetime, None], sen_to: Union[datetime, None]) -> None:
                 )
             )
 
-            indexes["ndwi"].append(
-                ndwi(
+            indexes["ndwi2"].append(
+                ndwi2(
                     folder.name,
                     bands["b03_10m"],
                     bands["b08_10m"],

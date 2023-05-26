@@ -22,4 +22,4 @@ Usage:
 
 `python -m tools.process_new_imagery`
 
-`python -m tools.process_new_imagery -f 2022-12-01 -t 2022-12-10`
+`python -m tools.process_new_imagery -tn task -f 2022-12-01 -t 2022-12-10`
