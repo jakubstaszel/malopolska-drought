@@ -19,7 +19,7 @@ def detect_clouds(
 
     if cloud_prob_dir:
         clouds_prob = rasterio.open(cloud_prob_dir).read(1).astype("int")
-        # if probability of cloud > 20% then it is cloud
+        # if probability of cloud > 5% then it is cloud
         clouds_prob[clouds_prob <= 5] = 0
         clouds_prob[clouds_prob > 5] = 1
 

@@ -3,6 +3,7 @@ from pathlib import Path
 
 import rasterio
 from rasterio.warp import calculate_default_transform, reproject, Resampling
+import numpy as np
 
 
 def epsg3857(layer: Path, output_folder: Path):
@@ -33,6 +34,7 @@ def epsg3857(layer: Path, output_folder: Path):
                     dst_transform=transform,
                     dst_crs=dst_crs,
                     resampling=Resampling.nearest,
+                    dst_nodata=np.nan
                 )
 
     return output_layer

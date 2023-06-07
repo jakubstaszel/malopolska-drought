@@ -4,6 +4,7 @@ from datetime import datetime
 
 import rasterio
 from rasterio.merge import merge
+import numpy as np
 
 
 def merge_rasters(index_name: str, layers_to_merge: List[Path], output_folder):
@@ -16,7 +17,7 @@ def merge_rasters(index_name: str, layers_to_merge: List[Path], output_folder):
     rasters = []
     print("Merging : " + index_name)
     rasters.extend(layers_opened)
-    mosaic, out_trans = merge(rasters)
+    mosaic, out_trans = merge(rasters, nodata=np.nan)
 
     kwargs = src.meta.copy()
     kwargs.update(

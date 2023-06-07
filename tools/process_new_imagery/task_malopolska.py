@@ -95,7 +95,6 @@ def run_malopolska(
     sen_from: Union[datetime, None], sen_to: Union[datetime, None]
 ) -> None:
     """
-    This task supports only AOIs that are inside one imagery.
     """
     # ------------------------------------------------------------------------------------ find new products
     sate = "S2A"
@@ -107,7 +106,7 @@ def run_malopolska(
         sate + "*T34UDA*",
         sate + "*T34UEV*",
     }
-    # identifier = "*34UDA*"
+    # identifier = "*R036_T34UDA*"
     products_df = data_check(
         check_folder(Path.cwd().joinpath("data", "download")),
         Polygon(POLYGON),
@@ -115,12 +114,12 @@ def run_malopolska(
         sen_to,
         identifier=identifier,
         check_LTA=True,
-        processing_level="Level-1C"
+        processing_level='Level-2A'
     )
 
-    if len(products_df) != 6:
-        raise ValueError("Time range is too wide or too narrow")
-    print(len(products_df))
+    # if len(products_df) != 6:
+    #     raise ValueError("Time range is too wide or too narrow")
+    # print(len(products_df))
 
     # ------------------------------------------------------------------------------------ download new satellite imagery
     if not products_df is None:
